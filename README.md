@@ -26,7 +26,44 @@ This is designed to be easily forkable and customisable for your own App in your
 ![](./imgs/modal.png)
 ![](./imgs/msg.png)
 
-## Installation
+## Setup
+
+### Prerequisites
+
+- Python 3.13 or higher (older versions may work, however this project was built and tested on 3.13)
+- A Slack workspace where you have permission to install Apps
+  - Workspace Admin is **NOT required**!
+
+### Slack App
+
+#### Creation
+
+1. Go to [api.slack.com/apps](https://api.slack.com/apps) and click **Create New App**
+2. Choose **From scratch**
+3. Give it a name (e.g., "Anya") and select your workspace
+4. Click **Create App**
+
+#### Permissions and Configuration
+
+1. Enable **Socket Mode**
+2. Generate a new App token and save it for later - it starts with 'xapp-'
+3. Go to **OAuth & Permissions** and under **Bot Token Scopes**, give the Bot the following permissions:
+   - `channels:manage`
+   - `channels:read`
+   - `chat:write`
+   - `chat:write.customize`
+   - `commands`
+   - `groups:history`
+   - `groups:read`
+   - `groups:write`
+   - `groups:write.invites`
+   - `im:write`
+   - `users:read`
+   - `im:history`
+4. Create slash commands
+5. Install App to the workspace and copy the **Bot User OAuth token** - it starts with 'xoxb-'
+
+### Installation
 
 Clone this repository:
 ```bash
