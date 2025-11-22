@@ -22,6 +22,10 @@ This is designed to be easily forkable and customisable for your own App in your
 4. You receive a private DM from the app with the collected info and may wish to accept or ignore
 5. Click accept and the app invites them to your private channel
 
+![](./imgs/workflow.png)
+![](./imgs/modal.png)
+![](./imgs/msg.png)
+
 ## Installation
 
 Clone this repository:
