@@ -16,9 +16,98 @@ app = App(token=SLACK_BOT_TOKEN)
 @app.command("/join-junyaverse")
 def handle_join_request(ack, command, client):
     ack()
-
     requester_id = command["user_id"]
+    send_join_request(requester_id, client)
 
+@app.command("/wf-junyaverse")
+def handle_workflow_request(ack, say, client):
+    ack()
+
+    say(
+        text=f"Join <@{config.USER_ID}>'s personal channel! :3",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"Join <@{config.USER_ID}>'s personal channel! :3"
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "join!",
+                            "emoji": True
+                        },
+                        "style": "primary",
+                        "value": "trigger_join",
+                        "action_id": "workflow-join-button"
+                    }
+                ]
+            }
+        ]
+    )
+
+@app.action("workflow-join-button")
+def handle_workflow_event(ack, body, client):
+    ack()
+    requester_id = body["user"]["id"]
+    send_join_request(requester_id, client)
+
+@app.action("joinrequest-accept")
+def handle_joinrequest_accept(ack, body, client):
+    ack()
+
+    requester_id = body["actions"][0]["value"]
+
+    try:
+        client.conversations_invite(
+            channel=config.CHANNEL_ID,
+            users=requester_id
+        )
+
+        client.chat_update(
+            channel=body["channel"]["id"],
+            ts=body["message"]["ts"],
+            text=f"✅ <@{requester_id}> has been invited to <#{config.CHANNEL_ID}>",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"✅ <@{requester_id}> has been invited to <#{config.CHANNEL_ID}>"
+                    }
+                }
+            ]
+        )
+    except Exception as e:
+        print(e)
+        client.chat_postMessage(
+            channel=config.USER_ID,
+            text=f"❌ Failed to invite <@{requester_id}> to <#{config.CHANNEL_ID}>",
+            blocks=[
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "mrkdwn",
+                        "text": f"❌ Failed to invite <@{requester_id}> to <#{config.CHANNEL_ID}>"
+                    }
+                }
+            ]
+        )
+
+@app.event("message")
+def handle_message_events(event, logger):
+    if event.get("subtype") is not None:
+        return
+
+    logger.info(event)
+
+def send_join_request(requester_id, client):
     client.chat_postMessage(
         channel=requester_id,
         text="your request to join has been sent! please DO NOT resend requests. i receive all of them :neocat_think:"
@@ -53,54 +142,6 @@ def handle_join_request(ack, command, client):
             }
         ]
     )
-
-@app.action("joinrequest-accept")
-def handle_joinrequest_accept(ack, body, client):
-    ack()
-
-    requester_id = body["actions"][0]["value"]
-
-    try:
-        client.conversations_invite(
-            channel=config.CHANNEL_ID,
-            users=requester_id
-        )
-
-        client.chat_update(
-            channel=body["channel"]["id"],
-            ts=body["message"]["ts"],
-            text=f"✅ <@{requester_id}> has been invited to <#{config.CHANNEL_ID}>",
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"✅ <@{requester_id}> has been invited to <#{config.CHANNEL_ID}>"
-                    }
-                }
-            ]
-        )
-    except Exception as e:
-        client.chat_postMessage(
-            channel=config.USER_ID,
-            text=f"❌ Failed to invite <@{requester_id}> to <#{config.CHANNEL_ID}>",
-            blocks=[
-                {
-                    "type": "section",
-                    "text": {
-                        "type": "mrkdwn",
-                        "text": f"❌ Failed to invite <@{requester_id}> to <#{config.CHANNEL_ID}>"
-                    }
-                }
-            ]
-        )
-
-@app.event("message")
-def handle_message_events(event, logger):
-    if event.get("subtype") is not None:
-        return
-
-    logger.info(event)
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, SLACK_APP_TOKEN)
