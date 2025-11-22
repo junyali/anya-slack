@@ -16,23 +16,21 @@ app = App(token=SLACK_BOT_TOKEN)
 @app.command("/join-junyaverse")
 def handle_join_request(ack, command, client):
     ack()
-
     requester_id = command["user_id"]
+    send_join_request(requester_id, client)
 
-    client.chat_postMessage(
-        channel=requester_id,
-        text="your request to join has been sent! please DO NOT resend requests. i receive all of them :neocat_think:"
-    )
+@app.command("/wf-junyaverse")
+def handle_workflow_request(ack, say, client):
+    ack()
 
-    client.chat_postMessage(
-        channel=config.USER_ID,
-        text=f"Haiii cutiee!!!\nHope your day is great today :33 <@{requester_id}> wants to join your channel!!",
+    say(
+        text=f"Join <@{config.USER_ID}>'s personal channel! :3",
         blocks=[
             {
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": f"Haiii cutiee!!!\nHope your day is great today :33 <@{requester_id}> wants to join your channel!!"
+                    "text": f"Join <@{config.USER_ID}>'s personal channel! :3"
                 }
             },
             {
@@ -42,17 +40,23 @@ def handle_join_request(ack, command, client):
                         "type": "button",
                         "text": {
                             "type": "plain_text",
-                            "text": "Accept",
+                            "text": "join!",
                             "emoji": True
                         },
                         "style": "primary",
-                        "value": requester_id,
-                        "action_id": "joinrequest-accept"
+                        "value": "trigger_join",
+                        "action_id": "workflow-join-button"
                     }
                 ]
             }
         ]
     )
+
+@app.action("workflow-join-button")
+def handle_workflow_event(ack, body, client):
+    ack()
+    requester_id = body["user"]["id"]
+    send_join_request(requester_id, client)
 
 @app.action("joinrequest-accept")
 def handle_joinrequest_accept(ack, body, client):
@@ -101,6 +105,42 @@ def handle_message_events(event, logger):
         return
 
     logger.info(event)
+
+def send_join_request(requester_id, client):
+    client.chat_postMessage(
+        channel=requester_id,
+        text="your request to join has been sent! please DO NOT resend requests. i receive all of them :neocat_think:"
+    )
+
+    client.chat_postMessage(
+        channel=config.USER_ID,
+        text=f"Haiii cutiee!!!\nHope your day is great today :33 <@{requester_id}> wants to join your channel!!",
+        blocks=[
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"Haiii cutiee!!!\nHope your day is great today :33 <@{requester_id}> wants to join your channel!!"
+                }
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "Accept",
+                            "emoji": True
+                        },
+                        "style": "primary",
+                        "value": requester_id,
+                        "action_id": "joinrequest-accept"
+                    }
+                ]
+            }
+        ]
+    )
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, SLACK_APP_TOKEN)
