@@ -5,6 +5,18 @@ CHANNEL_ID = "C091BU30NGK"
 # Running the workflow command will post a workflow-style button in the channel you ran it in (like #neighbourhood)
 ENABLE_WORKFLOW_COMMAND = True
 
+# Prompt users with workflow-style questions before sending off join requests
+ENABLE_JOIN_MODAL = False
+
+JOIN_QUESTIONS = [
+    {
+        "label": "dog or cat infrastructure?",
+        "placeholder": "meow or wrrf...",
+        "multiline": True,
+        "optional": False
+    }
+]
+
 # Slack commands MUST be registered in your Slack App
 # They must NOT conflict with existing registered commands
 # Please don't register conflicting command names

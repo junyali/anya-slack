@@ -17,7 +17,8 @@ app = App(token=SLACK_BOT_TOKEN)
 def handle_join_request(ack, command, client):
     ack()
     requester_id = command["user_id"]
-    send_join_request(requester_id, client)
+    trigger_id = command["trigger_id"]
+    send_join_request(requester_id, client, trigger_id=trigger_id)
 
 if config.ENABLE_WORKFLOW_COMMAND:
     @app.command(config.WORKFLOW_COMMAND)
@@ -57,7 +58,8 @@ if config.ENABLE_WORKFLOW_COMMAND:
     def handle_workflow_event(ack, body, client):
         ack()
         requester_id = body["user"]["id"]
-        send_join_request(requester_id, client)
+        trigger_id = body["trigger_id"]
+        send_join_request(requester_id, client, trigger_id=trigger_id)
 
 @app.action(config.ACCEPT_ACTION_ID)
 def handle_joinrequest_accept(ack, body, client):
@@ -100,6 +102,15 @@ def handle_joinrequest_accept(ack, body, client):
             ]
         )
 
+@app.view("join_modal_submit")
+def handle_modal_submission(ack, body, client, view):
+    ack()
+
+    requester_id = view["private_metadata"]
+    responses = extract_modal_responses(view)
+
+    send_join_request(requester_id, client, responses=responses)
+
 @app.event("message")
 def handle_message_events(event, logger):
     if event.get("subtype") is not None:
@@ -107,7 +118,32 @@ def handle_message_events(event, logger):
 
     logger.info(event)
 
-def send_join_request(requester_id, client):
+def send_join_request(requester_id, client, trigger_id=None, responses=None):
+    if config.ENABLE_JOIN_MODAL and responses is None:
+        if trigger_id:
+            client.views_open(
+                trigger_id=trigger_id,
+                view={
+                    "type": "modal",
+                    "callback_id": "join_modal_submit",
+                    "title": {
+                        "type": "plain_text",
+                        "text": "Questions"
+                    },
+                    "submit": {
+                        "type": "plain_text",
+                        "text": "Submit"
+                    },
+                    "blocks": build_modal_blocks(),
+                    "private_metadata": requester_id
+                }
+            )
+        return
+
+    notification_text = config.JOIN_REQUEST_NOTIFICATION_MESSAGE.format(requester_id=requester_id)
+    if responses:
+        notification_text += format_responses_text(responses)
+
     client.chat_postMessage(
         channel=requester_id,
         text=config.JOIN_CONFIRMATION_MESSAGE
@@ -121,7 +157,7 @@ def send_join_request(requester_id, client):
                 "type": "section",
                 "text": {
                     "type": "mrkdwn",
-                    "text": config.JOIN_REQUEST_NOTIFICATION_MESSAGE.format(requester_id=requester_id)
+                    "text": notification_text
                 }
             },
             {
@@ -142,6 +178,59 @@ def send_join_request(requester_id, client):
             }
         ]
     )
+
+def build_modal_blocks():
+    blocks = []
+    for index, question in enumerate(config.JOIN_QUESTIONS):
+        block = {
+            "type": "input",
+            "block_id": f"question_{index}",
+            "label": {
+                "type": "plain_text",
+                "text": question["label"],
+                "emoji": True
+            },
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "answer",
+                "multiline": question.get("multiline", False),
+                "placeholder": {
+                    "type": "plain_text",
+                    "text": question.get("placeholder", "")
+                }
+            },
+            "optional": question.get("optional", False)
+        }
+        blocks.append(block)
+
+    return blocks
+
+def extract_modal_responses(view):
+    responses = []
+    values = view["state"]["values"]
+
+    for index, question in enumerate(config.JOIN_QUESTIONS):
+        block_id = f"question_{index}"
+        answer = values[block_id]["answer"]["value"]
+
+        if answer:
+            responses.append({
+                "question": question["label"],
+                "answer": answer
+            })
+
+    return responses
+
+def format_responses_text(responses):
+    if not responses:
+        return ""
+
+    text = "\n\n*Responses:*"
+    for response in responses:
+        answer = response["answer"].replace("\n", "\n  ")
+        text += f"\n- {response['question']}\n  {answer}"
+
+    return text
 
 if __name__ == "__main__":
     handler = SocketModeHandler(app, SLACK_APP_TOKEN)
